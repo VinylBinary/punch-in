@@ -36,6 +36,9 @@ async def mark_attendance(action: str):
 
 app = FastAPI()
 
+@app.get("wakeup")
+async def wakeup()
+    return {"success":True}
 
 @app.get("/signin")
 async def signin():
