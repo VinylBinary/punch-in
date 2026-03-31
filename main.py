@@ -1,23 +1,22 @@
-import httpx
-from fastapi import FastAPI, HTTPException
-import os
-from login_challenge import  perform_full_auth
-from encrypt import encrypt
 from dotenv import load_dotenv
 
 load_dotenv()
 
+import requests
+from flask import Flask, jsonify
+import os
+from login_challenge import perform_full_auth
+from encrypt import encrypt
 
 
 BASE_URL = os.getenv("BASE_URL")
 username = os.getenv("USERNAME")
 password = os.getenv("PASSWORD")
 
-
-async def mark_attendance(action: str):
+def mark_attendance(action: str):
     access_token = perform_full_auth(username, encrypt(password))
     if not access_token:
-        raise HTTPException(status_code=400, detail="Unable to login")
+        return {"error": "Unable to login"}, 400
 
     url = f"{BASE_URL}/v3/api/attendance/mark-attendance?action={action}"
     headers = {
@@ -26,31 +25,40 @@ async def mark_attendance(action: str):
         "X-Requested-With": "XMLHttpRequest",
     }
 
-    async with httpx.AsyncClient(cookies={"access_token": access_token}, headers=headers) as client:
-        resp = await client.post(url, json={})
-        try:
-            return resp.json()
-        except Exception as e:
-            raise HTTPException(status_code=500, detail=f"Failed to parse response")
+    session = requests.Session()
+    session.cookies.set("access_token", access_token)
+    resp = session.post(url, json={}, headers=headers)
+    try:
+        return resp.json()
+    except Exception as e:
+        return {"error": "Failed to parse response"}, 500
 
+app = Flask(__name__)
 
-app = FastAPI()
+@app.route("/wakeup", methods=['GET'])
+def wakeup():
+    return jsonify({"success": True})
 
-@app.get("/wakeup")
-async def wakeup():
-    return {"success":True}
+@app.route("/signin", methods=['GET'])
+def signin():
+    result = mark_attendance("Signin")
+    if isinstance(result, tuple):  # error case
+        return jsonify(result[0]), result[1]
+    return jsonify(result)
 
-@app.get("/signin")
-async def signin():
-    return await mark_attendance("Signin")
+@app.route("/signout", methods=['GET'])
+def signout():
+    result = mark_attendance("Signout")
+    if isinstance(result, tuple):  # error case
+        return jsonify(result[0]), result[1]
+    return jsonify(result)
 
-@app.get("/signout")
-async def signout():
-    return await mark_attendance("Signout")
-
-@app.get("/auth_token")
-async def auth_token():
+@app.route("/auth_token", methods=['GET'])
+def auth_token():
     token = perform_full_auth(username, encrypt(password))
     if not token:
-        raise HTTPException(status_code=500, detail="Failed to get access token")
+        return {"error": "Failed to get access token"}, 500
     return {"access_token": token}
+
+if __name__ == '__main__':
+    app.run(debug=True)
