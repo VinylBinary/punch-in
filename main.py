@@ -60,5 +60,5 @@ def auth_token():
         return {"error": "Failed to get access token"}, 500
     return {"access_token": token}
 
-if __name__ == '__main__':
-    app.run(debug=True)
+# if __name__ == '__main__':
+#     app.run(debug=True)
