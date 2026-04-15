@@ -1,17 +1,12 @@
 import httpx
 from fastapi import FastAPI, HTTPException
-import os
 from login_challenge import  perform_full_auth
 from encrypt import encrypt
-from dotenv import load_dotenv
+from config import ENV_PROJECT
 
-load_dotenv()
-
-
-
-BASE_URL = os.getenv("BASE_URL")
-username = os.getenv("USERNAME")
-password = os.getenv("PASSWORD")
+BASE_URL = ENV_PROJECT.BASE_URL
+username = ENV_PROJECT.LOGIN_USERNAME
+password = ENV_PROJECT.LOGIN_PASSWORD
 
 
 async def mark_attendance(action: str):

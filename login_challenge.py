@@ -3,8 +3,7 @@ import secrets
 import hashlib
 import base64
 import re
-import os
-
+from config import ENV_PROJECT
 
 def generate_pkce():
     # Generate a random verifier
@@ -19,7 +18,7 @@ def generate_state():
     return secrets.token_urlsafe(16)
 
 # --- Configuration ---
-BASE_URL = os.getenv("BASE_URL")
+BASE_URL = ENV_PROJECT.BASE_URL
 USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:148.0) Gecko/20100101 Firefox/148.0"
 
 session = requests.Session()
@@ -51,7 +50,9 @@ def perform_full_auth(username, encrypted_password):
     login_payload = {"userName": username, "password": encrypted_password}
     login_headers = {"X-OAUTH-CHALLENGE": login_challenge}
     login_res = session.post(f"{BASE_URL}/uas/v1/login", json=login_payload, headers=login_headers).json()
-    callback_res = session.get(login_res['redirectUrl'])
+    callback_res = session.get(login_res['redirectUrl']) if login_res.get("redirectUrl") else None
+    if not callback_res:
+        return None  
     
     auth_code = re.search(r'code=([^&]+)', callback_res.url).group(1)
 
